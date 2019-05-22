@@ -60,6 +60,7 @@ type CloudProvider interface {
 	SkippedFields() map[string]bool
 	GenerateDefaultTemplate() *model.InstanceTemplateV4Request
 	GenerateDefaultNetwork(mode NetworkMode) *model.NetworkV4Request
+	GenerateDefaultNetworkWithParams(func(string) string, NetworkMode) *model.EnvironmentNetworkV4Request
 	GenerateNetworkRequestFromNetworkResponse(response *model.NetworkV4Response) *model.NetworkV4Request
 	GenerateDefaultSecurityGroup(node Node) *model.SecurityGroupV4Request
 	SetParametersTemplate(request *model.StackV4Request)

@@ -3,6 +3,7 @@ package env
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hortonworks/cb-cli/dataplane/cloud"
 	"strconv"
 	"strings"
 	"time"
@@ -138,25 +139,30 @@ func createEnvironmentImpl(c *cli.Context, workspaceId int64, EnvironmentV4Reque
 }
 
 func GenerateAwsEnvironmentTemplate(c *cli.Context) error {
-	template := createEnvironmentWithNetwork(c)
-	template.Network.Aws = &model.EnvironmentNetworkAwsV4Params{
-		VpcID: new(string),
-	}
+	cloud.SetProviderType(cloud.AWS)
+	template := createEnvironmentWithNetwork(getNetworkMode(c), c)
 	return printTemplate(template)
 }
 
 func GenerateAzureEnvironmentTemplate(c *cli.Context) error {
-	template := createEnvironmentWithNetwork(c)
-	template.Network.Azure = &model.EnvironmentNetworkAzureV4Params{
-		ResourceGroupName: new(string),
-		NetworkID:         new(string),
-		NoFirewallRules:   false,
-		NoPublicIP:        false,
-	}
+	cloud.SetProviderType(cloud.AZURE)
+	template := createEnvironmentWithNetwork(getNetworkMode(c), c)
 	return printTemplate(template)
 }
 
-func createEnvironmentWithNetwork(c *cli.Context) model.EnvironmentV4Request {
+func getNetworkMode(c *cli.Context) cloud.NetworkMode {
+	switch c.Command.Names()[0] {
+	case "create-new-network":
+		return cloud.NEW_NETWORK_NEW_SUBNET
+	case "use-existing-network":
+		return cloud.EXISTING_NETWORK_EXISTING_SUBNET
+	default:
+		return cloud.NO_NETWORK
+	}
+}
+
+func createEnvironmentWithNetwork(mode cloud.NetworkMode, c *cli.Context) model.EnvironmentV4Request {
+	provider := cloud.GetProvider()
 	template := model.EnvironmentV4Request{
 		Name:           new(string),
 		Description:    new(string),
@@ -172,9 +178,7 @@ func createEnvironmentWithNetwork(c *cli.Context) model.EnvironmentV4Request {
 			Longitude: 0,
 			Latitude:  0,
 		},
-		Network: &model.EnvironmentNetworkV4Request{
-			SubnetIds: make([]string, 0),
-		},
+		Network: provider.GenerateDefaultNetworkWithParams(c.String, mode),
 	}
 	if credName := c.String(fl.FlEnvironmentCredentialOptional.Name); len(credName) != 0 {
 		template.CredentialName = credName

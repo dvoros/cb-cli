@@ -46,6 +46,10 @@ func (p *GcpProvider) GenerateDefaultNetwork(mode cloud.NetworkMode) *model.Netw
 	}
 }
 
+func (p *GcpProvider) GenerateDefaultNetworkWithParams(getFlags func(string) string, mode cloud.NetworkMode) *model.EnvironmentNetworkV4Request {
+	return &model.EnvironmentNetworkV4Request{}
+}
+
 func (p *GcpProvider) SetParametersTemplate(request *model.StackV4Request) {
 }
 

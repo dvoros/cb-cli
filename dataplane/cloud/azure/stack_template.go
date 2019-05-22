@@ -3,6 +3,8 @@ package azure
 import (
 	"github.com/hortonworks/cb-cli/dataplane/api/model"
 	"github.com/hortonworks/cb-cli/dataplane/cloud"
+	fl "github.com/hortonworks/cb-cli/dataplane/flags"
+	"github.com/hortonworks/cb-cli/dataplane/types"
 	"github.com/hortonworks/dp-cli-common/utils"
 )
 
@@ -21,6 +23,43 @@ func (p *AzureProvider) GenerateDefaultNetwork(mode cloud.NetworkMode) *model.Ne
 	default:
 		return &model.NetworkV4Request{
 			SubnetCIDR: cloud.DEFAULT_SUBNET_CIDR,
+		}
+	}
+}
+
+func (p *AzureProvider) GenerateDefaultNetworkWithParams(getFlags func(string) string, mode cloud.NetworkMode) *model.EnvironmentNetworkV4Request {
+	switch mode {
+	case cloud.NEW_NETWORK_NEW_SUBNET:
+		subnetCidrs := utils.DelimitedStringToArray(getFlags(fl.FlSubnetCidrs.Name), ",")
+		networkCidr := getFlags(fl.FlNetworkCidr.Name)
+		return &model.EnvironmentNetworkV4Request{
+			SubnetCidrs: subnetCidrs,
+			NetworkCidr: networkCidr,
+		}
+	case cloud.EXISTING_NETWORK_EXISTING_SUBNET:
+		networkId := getFlags(fl.FlNetworkId.Name)
+		resourceGroup := getFlags(fl.FlResourceGroupName.Name)
+		subnetIds := utils.DelimitedStringToArray(getFlags(fl.FlSubnetIds.Name), ",")
+		return &model.EnvironmentNetworkV4Request{
+			Azure: &model.EnvironmentNetworkAzureV4Params{
+				NetworkID:         &networkId,
+				ResourceGroupName: &resourceGroup,
+				NoPublicIP:        false,
+				NoFirewallRules:   false,
+			},
+			SubnetIds: subnetIds,
+		}
+	default:
+		return &model.EnvironmentNetworkV4Request{
+			Azure: &model.EnvironmentNetworkAzureV4Params{
+				NetworkID:         &(&types.S{S: "____"}).S,
+				ResourceGroupName: &(&types.S{S: "____"}).S,
+				NoPublicIP:        false,
+				NoFirewallRules:   false,
+			},
+			SubnetIds:   []string{"____"},
+			SubnetCidrs: []string{"____"},
+			NetworkCidr: "____",
 		}
 	}
 }

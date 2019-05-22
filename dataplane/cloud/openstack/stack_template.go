@@ -39,6 +39,10 @@ func (p *OpenstackProvider) GenerateDefaultNetwork(mode cloud.NetworkMode) *mode
 	}
 }
 
+func (p *OpenstackProvider) GenerateDefaultNetworkWithParams(getFlags func(string) string, mode cloud.NetworkMode) *model.EnvironmentNetworkV4Request {
+	return &model.EnvironmentNetworkV4Request{}
+}
+
 func (p *OpenstackProvider) SetParametersTemplate(request *model.StackV4Request) {
 }
 

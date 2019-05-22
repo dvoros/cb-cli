@@ -17,3 +17,7 @@ func (p *YarnProvider) SetParametersTemplate(request *model.StackV4Request) {
 
 func (p *YarnProvider) SetInstanceGroupParametersTemplate(request *model.InstanceGroupV4Request, node cloud.Node) {
 }
+
+func (p *YarnProvider) GenerateDefaultNetworkWithParams(getFlags func(string) string, mode cloud.NetworkMode) *model.EnvironmentNetworkV4Request {
+	return &model.EnvironmentNetworkV4Request{}
+}
