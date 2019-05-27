@@ -19,7 +19,7 @@ import (
 // swagger:model SynchronizeUsersV1Request
 type SynchronizeUsersV1Request struct {
 
-	// name of the environment
+	// environment of the freeipa stack
 	// Required: true
 	EnvironmentName *string `json:"environmentName"`
 
@@ -27,7 +27,7 @@ type SynchronizeUsersV1Request struct {
 	// Unique: true
 	Groups []*GroupV1 `json:"groups"`
 
-	// name of the stack
+	// name of the freeipa stack
 	// Required: true
 	Name *string `json:"name"`
 

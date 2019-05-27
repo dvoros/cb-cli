@@ -43,9 +43,9 @@ type DescribeLdapConfigV1Response struct {
 	// domain in LDAP server (e.g. ad.seq.com).
 	Domain string `json:"domain,omitempty"`
 
-	// Environments of the resource
-	// Unique: true
-	Environments []string `json:"environments"`
+	// The crn of the environment
+	// Required: true
+	EnvironmentID *string `json:"environmentId"`
 
 	// Group Member Attribute (defaults to member)
 	GroupMemberAttribute string `json:"groupMemberAttribute,omitempty"`
@@ -64,7 +64,7 @@ type DescribeLdapConfigV1Response struct {
 	Host *string `json:"host"`
 
 	// id of the resource
-	ID int64 `json:"id,omitempty"`
+	ID string `json:"id,omitempty"`
 
 	// name of the resource
 	// Required: true
@@ -117,7 +117,7 @@ func (m *DescribeLdapConfigV1Response) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateEnvironments(formats); err != nil {
+	if err := m.validateEnvironmentID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -243,13 +243,9 @@ func (m *DescribeLdapConfigV1Response) validateDirectoryType(formats strfmt.Regi
 	return nil
 }
 
-func (m *DescribeLdapConfigV1Response) validateEnvironments(formats strfmt.Registry) error {
+func (m *DescribeLdapConfigV1Response) validateEnvironmentID(formats strfmt.Registry) error {
 
-	if swag.IsZero(m.Environments) { // not required
-		return nil
-	}
-
-	if err := validate.UniqueItems("environments", "body", m.Environments); err != nil {
+	if err := validate.Required("environmentId", "body", m.EnvironmentID); err != nil {
 		return err
 	}
 

@@ -16,8 +16,8 @@ import (
 // swagger:model TestLdapConfigV1Request
 type TestLdapConfigV1Request struct {
 
-	// name of the resource
-	ExistingLdapName string `json:"existingLdapName,omitempty"`
+	// The crn of the environment
+	EnvironmentID string `json:"environmentId,omitempty"`
 
 	// Request that contains the minimal set of fields to test LDAP connectivity
 	Ldap *MinimalLdapConfigV1Request `json:"ldap,omitempty"`

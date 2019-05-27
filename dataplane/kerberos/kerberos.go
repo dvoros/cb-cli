@@ -1,14 +1,13 @@
 package kerberos
 
 import (
-	"encoding/base64"
-	"strconv"
-	"strings"
+	"fmt"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	v4krb "github.com/hortonworks/cb-cli/dataplane/api/client/v4_workspace_id_kerberos"
-	"github.com/hortonworks/cb-cli/dataplane/api/model"
+	"github.com/hortonworks/cb-cli/dataplane/api-environment/client/v1env"
+	"github.com/hortonworks/cb-cli/dataplane/api-freeipa/client/v1kerberos"
+	model "github.com/hortonworks/cb-cli/dataplane/api-freeipa/model"
 	fl "github.com/hortonworks/cb-cli/dataplane/flags"
 	"github.com/hortonworks/cb-cli/dataplane/oauth"
 	"github.com/hortonworks/dp-cli-common/utils"
@@ -18,10 +17,10 @@ import (
 var Header = []string{"Name", "Description", "Type", "Environments", "ID"}
 
 type kerberos struct {
-	Name         string `json:"Name" yaml:"Name"`
-	Description  string `json:"Description" yaml:"Description"`
-	Type         string `json:"Type" yaml:"Type"`
-	Environments []string
+	Name          string `json:"Name" yaml:"Name"`
+	Description   string `json:"Description" yaml:"Description"`
+	Type          string `json:"Type" yaml:"Type"`
+	EnvironmentID string
 }
 
 type kerberosOutDescribe struct {
@@ -29,17 +28,14 @@ type kerberosOutDescribe struct {
 	ID string `json:"ID" yaml:"ID"`
 }
 
-type kerberosClient interface {
-	ListKerberosConfigByWorkspace(params *v4krb.ListKerberosConfigByWorkspaceParams) (*v4krb.ListKerberosConfigByWorkspaceOK, error)
-	GetKerberosConfigInWorkspace(params *v4krb.GetKerberosConfigInWorkspaceParams) (*v4krb.GetKerberosConfigInWorkspaceOK, error)
-	CreateKerberosConfigInWorkspace(params *v4krb.CreateKerberosConfigInWorkspaceParams) (*v4krb.CreateKerberosConfigInWorkspaceOK, error)
-	AttachKerberosConfigToEnvironments(params *v4krb.AttachKerberosConfigToEnvironmentsParams) (*v4krb.AttachKerberosConfigToEnvironmentsOK, error)
-	DetachKerberosConfigFromEnvironments(params *v4krb.DetachKerberosConfigFromEnvironmentsParams) (*v4krb.DetachKerberosConfigFromEnvironmentsOK, error)
-	DeleteKerberosConfigInWorkspace(params *v4krb.DeleteKerberosConfigInWorkspaceParams) (*v4krb.DeleteKerberosConfigInWorkspaceOK, error)
+type freeIpaKerberosClient interface {
+	CreateKerberosConfigForEnvironment(params *v1kerberos.CreateKerberosConfigForEnvironmentParams) (*v1kerberos.CreateKerberosConfigForEnvironmentOK, error)
+	GetKerberosConfigForEnvironment(params *v1kerberos.GetKerberosConfigForEnvironmentParams) (*v1kerberos.GetKerberosConfigForEnvironmentOK, error)
+	DeleteKerberosConfigForEnvironment(params *v1kerberos.DeleteKerberosConfigForEnvironmentParams) error
 }
 
 func (k *kerberos) DataAsStringArray() []string {
-	return []string{k.Name, k.Description, k.Type, strings.Join(k.Environments, ",")}
+	return []string{k.Name, k.Description, k.Type, k.EnvironmentID}
 }
 
 func (k *kerberosOutDescribe) DataAsStringArray() []string {
@@ -59,12 +55,12 @@ func CreateAdKerberos(c *cli.Context) error {
 	tcpAllowed := c.Bool(fl.FlKerberosTcpAllowed.Name)
 	principal := c.String(fl.FlKerberosPrincipal.Name)
 	url := c.String(fl.FlKerberosUrl.Name)
-	adminUrl := c.String(fl.FlKerberosAdminUrl.Name)
+	adminURL := c.String(fl.FlKerberosAdminUrl.Name)
 	realm := c.String(fl.FlKerberosRealm.Name)
-	ldapUrl := c.String(fl.FlKerberosLdapUrl.Name)
+	ldapURL := c.String(fl.FlKerberosLdapUrl.Name)
 	containerDn := c.String(fl.FlKerberosContainerDn.Name)
 
-	adRequest := model.ActiveDirectoryKerberosDescriptor{
+	adRequest := model.ActiveDirectoryKerberosV1Descriptor{
 		VerifyKdcTrust: verifyKdcTrust,
 		Domain:         domain,
 		NameServers:    nameServers,
@@ -72,9 +68,9 @@ func CreateAdKerberos(c *cli.Context) error {
 		TCPAllowed:     &tcpAllowed,
 		Principal:      &principal,
 		URL:            &url,
-		AdminURL:       &adminUrl,
+		AdminURL:       &adminURL,
 		Realm:          &realm,
-		LdapURL:        &ldapUrl,
+		LdapURL:        &ldapURL,
 		ContainerDn:    &containerDn,
 		Admin:          admin,
 	}
@@ -84,7 +80,7 @@ func CreateAdKerberos(c *cli.Context) error {
 	return SendCreateKerberosRequest(c, &kerberosRequest)
 }
 
-func CreateCustomKerberos(c *cli.Context) error {
+func CreateMitKerberos(c *cli.Context) error {
 	admin := c.String(fl.FlKerberosAdmin.Name)
 	verifyKdcTrust := GetVerifyKdcTrustFlag(c)
 	domain := c.String(fl.FlKerberosDomain.Name)
@@ -92,23 +88,25 @@ func CreateCustomKerberos(c *cli.Context) error {
 	password := c.String(fl.FlKerberosPassword.Name)
 	tcpAllowed := c.Bool(fl.FlKerberosTcpAllowed.Name)
 	principal := c.String(fl.FlKerberosPrincipal.Name)
-	krb5Conf := base64.StdEncoding.EncodeToString([]byte(c.String(fl.FlKerberosKrb5Conf.Name)))
-	descriptor := base64.StdEncoding.EncodeToString([]byte(c.String(fl.FlKerberosDescriptor.Name)))
+	url := c.String(fl.FlKerberosUrl.Name)
+	adminURL := c.String(fl.FlKerberosAdminUrl.Name)
+	realm := c.String(fl.FlKerberosRealm.Name)
 
-	customRequest := model.AmbariKerberosDescriptor{
+	mitRequest := model.MITKerberosV1Descriptor{
 		VerifyKdcTrust: verifyKdcTrust,
 		Domain:         domain,
 		NameServers:    nameServers,
 		Password:       &password,
 		TCPAllowed:     &tcpAllowed,
 		Principal:      &principal,
-		Krb5Conf:       &krb5Conf,
-		Descriptor:     &descriptor,
+		URL:            &url,
+		AdminURL:       &adminURL,
+		Realm:          &realm,
 		Admin:          admin,
 	}
 
 	kerberosRequest := CreateKerberosRequest(c)
-	kerberosRequest.AmbariDescriptor = &customRequest
+	kerberosRequest.Mit = &mitRequest
 	return SendCreateKerberosRequest(c, &kerberosRequest)
 }
 
@@ -121,10 +119,10 @@ func CreateFreeIpaKerberos(c *cli.Context) error {
 	tcpAllowed := c.Bool(fl.FlKerberosTcpAllowed.Name)
 	principal := c.String(fl.FlKerberosPrincipal.Name)
 	url := c.String(fl.FlKerberosUrl.Name)
-	adminUrl := c.String(fl.FlKerberosAdminUrl.Name)
+	adminURL := c.String(fl.FlKerberosAdminUrl.Name)
 	realm := c.String(fl.FlKerberosRealm.Name)
 
-	freeIpaRequest := model.FreeIPAKerberosDescriptor{
+	freeIpaRequest := model.FreeIPAKerberosV1Descriptor{
 		VerifyKdcTrust: verifyKdcTrust,
 		Domain:         domain,
 		NameServers:    nameServers,
@@ -132,7 +130,7 @@ func CreateFreeIpaKerberos(c *cli.Context) error {
 		TCPAllowed:     &tcpAllowed,
 		Principal:      &principal,
 		URL:            &url,
-		AdminURL:       &adminUrl,
+		AdminURL:       &adminURL,
 		Realm:          &realm,
 		Admin:          admin,
 	}
@@ -142,62 +140,51 @@ func CreateFreeIpaKerberos(c *cli.Context) error {
 	return SendCreateKerberosRequest(c, &kerberosRequest)
 }
 
-func CreateKerberosRequest(c *cli.Context) model.KerberosV4Request {
+func getEnvirontmentCrnByName(c *cli.Context) string {
+	environment := c.String(fl.FlEnvironmentName.Name)
+	envClient := oauth.Environment(*oauth.NewEnvironmentClientFromContext(c)).Environment
+	resp, err := envClient.V1env.GetEnvironmentV1(v1env.NewGetEnvironmentV1Params().WithName(environment))
+	if err != nil {
+		utils.LogErrorAndExit(err)
+	}
+	environmentDetails := resp.Payload
+	if len(environmentDetails.ID) == 0 {
+		errmsg := fmt.Sprintf("Failed to get the CRN of environment: %s", environment)
+		utils.LogErrorMessageAndExit(errmsg)
+	}
+	return environmentDetails.ID
+}
+
+func CreateKerberosRequest(c *cli.Context) model.CreateKerberosConfigV1Request {
 	kerberosName := c.String(fl.FlName.Name)
 	description := c.String(fl.FlDescriptionOptional.Name)
-	kerberosRequest := &model.KerberosV4Request{
-		Name:        &kerberosName,
-		Description: &description,
+	environment := getEnvirontmentCrnByName(c)
+
+	kerberosRequest := &model.CreateKerberosConfigV1Request{
+		Name:          &kerberosName,
+		Description:   &description,
+		EnvironmentID: &environment,
 	}
 
 	return *kerberosRequest
 }
 
-func SendCreateKerberosRequest(c *cli.Context, request *model.KerberosV4Request) error {
+func SendCreateKerberosRequest(c *cli.Context, request *model.CreateKerberosConfigV1Request) error {
 	defer utils.TimeTrack(time.Now(), "create kerberos")
 	workspaceID := c.Int64(fl.FlWorkspaceOptional.Name)
-	cbClient := oauth.NewCloudbreakHTTPClientFromContext(c)
+	freeIpaClient := oauth.FreeIpa(*oauth.NewFreeIpaClientFromContext(c)).FreeIpa
 	output := utils.Output{Format: c.String(fl.FlOutputOptional.Name)}
-	return SendCreateKerberosRequestImpl(cbClient.Cloudbreak.V4WorkspaceIDKerberos, workspaceID, request, output.Write)
+	return SendCreateKerberosRequestImpl(freeIpaClient.V1kerberos, workspaceID, request, output.Write)
 }
 
-func SendCreateKerberosRequestImpl(kerberosClient kerberosClient, workspaceID int64, request *model.KerberosV4Request, writer func([]string, utils.Row)) error {
-	resp, err := kerberosClient.CreateKerberosConfigInWorkspace(v4krb.NewCreateKerberosConfigInWorkspaceParams().WithWorkspaceID(workspaceID).WithBody(request))
+func SendCreateKerberosRequestImpl(kerberosClient freeIpaKerberosClient, workspaceID int64, request *model.CreateKerberosConfigV1Request, writer func([]string, utils.Row)) error {
+	resp, err := kerberosClient.CreateKerberosConfigForEnvironment(v1kerberos.NewCreateKerberosConfigForEnvironmentParams().WithBody(request))
 	if err != nil {
 		utils.LogErrorAndExit(err)
 	}
 	kerberosResponse := resp.Payload
 	writeResponse(writer, kerberosResponse)
-	log.Infof("[SendCreateKerberosRequestImpl] kerberos created with name: %s, id: %d", kerberosResponse.Name, kerberosResponse.ID)
-	return nil
-}
-
-func ListKerberos(c *cli.Context) error {
-	defer utils.TimeTrack(time.Now(), "list kerberos configs")
-	workspaceID := c.Int64(fl.FlWorkspaceOptional.Name)
-	output := utils.Output{Format: c.String(fl.FlOutputOptional.Name)}
-	cbClient := oauth.NewCloudbreakHTTPClientFromContext(c)
-	return ListKerberosImpl(cbClient.Cloudbreak.V4WorkspaceIDKerberos, workspaceID, output.WriteList)
-}
-
-func ListKerberosImpl(kerberosClient kerberosClient, workspaceID int64, writer func([]string, []utils.Row)) error {
-	listRequest := v4krb.NewListKerberosConfigByWorkspaceParams().WithWorkspaceID(workspaceID)
-	resp, err := kerberosClient.ListKerberosConfigByWorkspace(listRequest)
-	if err != nil {
-		utils.LogErrorAndExit(err)
-	}
-	var tableRows []utils.Row
-	for _, k := range resp.Payload.Responses {
-		row := &kerberosOutDescribe{
-			&kerberos{
-				Name:        *k.Name,
-				Description: utils.SafeStringConvert(k.Description),
-				Type:        utils.SafeStringConvert(&k.Type),
-			},
-			strconv.FormatInt(k.ID, 10)}
-		tableRows = append(tableRows, row)
-	}
-	writer(Header, tableRows)
+	log.Infof("[SendCreateKerberosRequestImpl] kerberos created with name: %s, id: %s", kerberosResponse.Name, kerberosResponse.ID)
 	return nil
 }
 
@@ -205,14 +192,14 @@ func GetKerberos(c *cli.Context) error {
 	defer utils.TimeTrack(time.Now(), "describe a kerberos")
 	output := utils.Output{Format: c.String(fl.FlOutputOptional.Name)}
 	workspaceID := c.Int64(fl.FlWorkspaceOptional.Name)
-	kerberosName := c.String(fl.FlName.Name)
-	cbClient := oauth.NewCloudbreakHTTPClientFromContext(c)
-	return GetKerberosImpl(cbClient.Cloudbreak.V4WorkspaceIDKerberos, workspaceID, kerberosName, output.Write)
+	environmentName := getEnvirontmentCrnByName(c)
+	freeIpaClient := oauth.FreeIpa(*oauth.NewFreeIpaClientFromContext(c)).FreeIpa
+	return GetKerberosImpl(freeIpaClient.V1kerberos, workspaceID, environmentName, output.Write)
 }
 
-func GetKerberosImpl(kerberosClient kerberosClient, workspaceID int64, kerberosName string, writer func([]string, utils.Row)) error {
-	log.Infof("[GetKerberos] describe kerberos config by name: %s", kerberosName)
-	resp, err := kerberosClient.GetKerberosConfigInWorkspace(v4krb.NewGetKerberosConfigInWorkspaceParams().WithWorkspaceID(workspaceID).WithName(kerberosName))
+func GetKerberosImpl(kerberosClient freeIpaKerberosClient, workspaceID int64, environmentName string, writer func([]string, utils.Row)) error {
+	log.Infof("[GetKerberos] describe kerberos config from environment: %s", environmentName)
+	resp, err := kerberosClient.GetKerberosConfigForEnvironment(v1kerberos.NewGetKerberosConfigForEnvironmentParams().WithEnvironmentID(&environmentName))
 	if err != nil {
 		utils.LogErrorAndExit(err)
 	}
@@ -224,30 +211,28 @@ func GetKerberosImpl(kerberosClient kerberosClient, workspaceID int64, kerberosN
 func DeleteKerberos(c *cli.Context) error {
 	defer utils.TimeTrack(time.Now(), "delete a kerberos")
 	workspaceID := c.Int64(fl.FlWorkspaceOptional.Name)
-	kerberosName := c.String(fl.FlName.Name)
-	output := utils.Output{Format: c.String(fl.FlOutputOptional.Name)}
-	cbClient := oauth.NewCloudbreakHTTPClientFromContext(c)
-	return DeleteKerberosImpl(cbClient.Cloudbreak.V4WorkspaceIDKerberos, workspaceID, kerberosName, output.Write)
+	environmentName := getEnvirontmentCrnByName(c)
+	freeIpaClient := oauth.FreeIpa(*oauth.NewFreeIpaClientFromContext(c)).FreeIpa
+	return DeleteKerberosImpl(freeIpaClient.V1kerberos, workspaceID, environmentName)
 }
 
-func DeleteKerberosImpl(kerberosClient kerberosClient, workspaceID int64, kerberosName string, writer func([]string, utils.Row)) error {
-	log.Infof("[DeleteKerberosImpl] delete kerberos config by name: %s", kerberosName)
-	response, err := kerberosClient.DeleteKerberosConfigInWorkspace(v4krb.NewDeleteKerberosConfigInWorkspaceParams().WithWorkspaceID(workspaceID).WithName(kerberosName))
+func DeleteKerberosImpl(kerberosClient freeIpaKerberosClient, workspaceID int64, environmentName string) error {
+	log.Infof("[DeleteKerberosImpl] delete kerberos config by name: %s", environmentName)
+	err := kerberosClient.DeleteKerberosConfigForEnvironment(v1kerberos.NewDeleteKerberosConfigForEnvironmentParams().WithEnvironmentID(&environmentName))
 	if err != nil {
 		utils.LogErrorAndExit(err)
 	}
-	kerberosResponse := response.Payload
-	writeResponse(writer, kerberosResponse)
-	log.Infof("[DeleteKerberosImpl] delete kerberos config deleted: %s", kerberosResponse.Name)
+	log.Infof("[DeleteKerberosImpl] kerberos config deleted from environment: %s", environmentName)
 	return nil
 }
 
-func writeResponse(writer func([]string, utils.Row), kerberosResponse *model.KerberosV4Response) {
+func writeResponse(writer func([]string, utils.Row), kerberosResponse *model.DescribeKerberosConfigV1Response) {
 	writer(append(Header), &kerberosOutDescribe{
 		&kerberos{
-			Name:        kerberosResponse.Name,
-			Description: utils.SafeStringConvert(kerberosResponse.Description),
-			Type:        utils.SafeStringConvert(kerberosResponse.Type),
+			Name:          kerberosResponse.Name,
+			Description:   utils.SafeStringConvert(kerberosResponse.Description),
+			EnvironmentID: *kerberosResponse.EnvironmentID,
+			Type:          utils.SafeStringConvert(kerberosResponse.Type),
 		},
-		strconv.FormatInt(kerberosResponse.ID, 10)})
+		kerberosResponse.ID})
 }

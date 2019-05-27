@@ -62,8 +62,8 @@ for the get kerberos config for environment operation typically these are writte
 */
 type GetKerberosConfigForEnvironmentParams struct {
 
-	/*Environment*/
-	Environment *string
+	/*EnvironmentID*/
+	EnvironmentID *string
 
 	timeout    time.Duration
 	Context    context.Context
@@ -103,15 +103,15 @@ func (o *GetKerberosConfigForEnvironmentParams) SetHTTPClient(client *http.Clien
 	o.HTTPClient = client
 }
 
-// WithEnvironment adds the environment to the get kerberos config for environment params
-func (o *GetKerberosConfigForEnvironmentParams) WithEnvironment(environment *string) *GetKerberosConfigForEnvironmentParams {
-	o.SetEnvironment(environment)
+// WithEnvironmentID adds the environmentID to the get kerberos config for environment params
+func (o *GetKerberosConfigForEnvironmentParams) WithEnvironmentID(environmentID *string) *GetKerberosConfigForEnvironmentParams {
+	o.SetEnvironmentID(environmentID)
 	return o
 }
 
-// SetEnvironment adds the environment to the get kerberos config for environment params
-func (o *GetKerberosConfigForEnvironmentParams) SetEnvironment(environment *string) {
-	o.Environment = environment
+// SetEnvironmentID adds the environmentId to the get kerberos config for environment params
+func (o *GetKerberosConfigForEnvironmentParams) SetEnvironmentID(environmentID *string) {
+	o.EnvironmentID = environmentID
 }
 
 // WriteToRequest writes these params to a swagger request
@@ -122,16 +122,16 @@ func (o *GetKerberosConfigForEnvironmentParams) WriteToRequest(r runtime.ClientR
 	}
 	var res []error
 
-	if o.Environment != nil {
+	if o.EnvironmentID != nil {
 
-		// query param environment
-		var qrEnvironment string
-		if o.Environment != nil {
-			qrEnvironment = *o.Environment
+		// query param environmentId
+		var qrEnvironmentID string
+		if o.EnvironmentID != nil {
+			qrEnvironmentID = *o.EnvironmentID
 		}
-		qEnvironment := qrEnvironment
-		if qEnvironment != "" {
-			if err := r.SetQueryParam("environment", qEnvironment); err != nil {
+		qEnvironmentID := qrEnvironmentID
+		if qEnvironmentID != "" {
+			if err := r.SetQueryParam("environmentId", qEnvironmentID); err != nil {
 				return err
 			}
 		}

@@ -62,8 +62,8 @@ for the get ldap request by name v1 operation typically these are written to a h
 */
 type GetLdapRequestByNameV1Params struct {
 
-	/*Environment*/
-	Environment *string
+	/*EnvironmentID*/
+	EnvironmentID *string
 
 	timeout    time.Duration
 	Context    context.Context
@@ -103,15 +103,15 @@ func (o *GetLdapRequestByNameV1Params) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithEnvironment adds the environment to the get ldap request by name v1 params
-func (o *GetLdapRequestByNameV1Params) WithEnvironment(environment *string) *GetLdapRequestByNameV1Params {
-	o.SetEnvironment(environment)
+// WithEnvironmentID adds the environmentID to the get ldap request by name v1 params
+func (o *GetLdapRequestByNameV1Params) WithEnvironmentID(environmentID *string) *GetLdapRequestByNameV1Params {
+	o.SetEnvironmentID(environmentID)
 	return o
 }
 
-// SetEnvironment adds the environment to the get ldap request by name v1 params
-func (o *GetLdapRequestByNameV1Params) SetEnvironment(environment *string) {
-	o.Environment = environment
+// SetEnvironmentID adds the environmentId to the get ldap request by name v1 params
+func (o *GetLdapRequestByNameV1Params) SetEnvironmentID(environmentID *string) {
+	o.EnvironmentID = environmentID
 }
 
 // WriteToRequest writes these params to a swagger request
@@ -122,16 +122,16 @@ func (o *GetLdapRequestByNameV1Params) WriteToRequest(r runtime.ClientRequest, r
 	}
 	var res []error
 
-	if o.Environment != nil {
+	if o.EnvironmentID != nil {
 
-		// query param environment
-		var qrEnvironment string
-		if o.Environment != nil {
-			qrEnvironment = *o.Environment
+		// query param environmentId
+		var qrEnvironmentID string
+		if o.EnvironmentID != nil {
+			qrEnvironmentID = *o.EnvironmentID
 		}
-		qEnvironment := qrEnvironment
-		if qEnvironment != "" {
-			if err := r.SetQueryParam("environment", qEnvironment); err != nil {
+		qEnvironmentID := qrEnvironmentID
+		if qEnvironmentID != "" {
+			if err := r.SetQueryParam("environmentId", qEnvironmentID); err != nil {
 				return err
 			}
 		}

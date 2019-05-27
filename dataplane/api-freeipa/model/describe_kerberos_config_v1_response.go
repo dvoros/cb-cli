@@ -39,8 +39,12 @@ type DescribeKerberosConfigV1Response struct {
 	// cluster instances will set this as the domain part of their hostname
 	Domain string `json:"domain,omitempty"`
 
+	// The crn of the environment
+	// Required: true
+	EnvironmentID *string `json:"environmentId"`
+
 	// id
-	ID int64 `json:"id,omitempty"`
+	ID string `json:"id,omitempty"`
 
 	// Ambari kerberos krb5.conf template
 	Krb5Conf *SecretResponse `json:"krb5Conf,omitempty"`
@@ -92,6 +96,10 @@ func (m *DescribeKerberosConfigV1Response) Validate(formats strfmt.Registry) err
 	}
 
 	if err := m.validateDescriptor(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateEnvironmentID(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -169,6 +177,15 @@ func (m *DescribeKerberosConfigV1Response) validateDescriptor(formats strfmt.Reg
 			}
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (m *DescribeKerberosConfigV1Response) validateEnvironmentID(formats strfmt.Registry) error {
+
+	if err := validate.Required("environmentId", "body", m.EnvironmentID); err != nil {
+		return err
 	}
 
 	return nil

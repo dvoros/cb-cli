@@ -62,8 +62,8 @@ for the get ldap config v1 operation typically these are written to a http.Reque
 */
 type GetLdapConfigV1Params struct {
 
-	/*Environment*/
-	Environment *string
+	/*EnvironmentID*/
+	EnvironmentID *string
 
 	timeout    time.Duration
 	Context    context.Context
@@ -103,15 +103,15 @@ func (o *GetLdapConfigV1Params) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithEnvironment adds the environment to the get ldap config v1 params
-func (o *GetLdapConfigV1Params) WithEnvironment(environment *string) *GetLdapConfigV1Params {
-	o.SetEnvironment(environment)
+// WithEnvironmentID adds the environmentID to the get ldap config v1 params
+func (o *GetLdapConfigV1Params) WithEnvironmentID(environmentID *string) *GetLdapConfigV1Params {
+	o.SetEnvironmentID(environmentID)
 	return o
 }
 
-// SetEnvironment adds the environment to the get ldap config v1 params
-func (o *GetLdapConfigV1Params) SetEnvironment(environment *string) {
-	o.Environment = environment
+// SetEnvironmentID adds the environmentId to the get ldap config v1 params
+func (o *GetLdapConfigV1Params) SetEnvironmentID(environmentID *string) {
+	o.EnvironmentID = environmentID
 }
 
 // WriteToRequest writes these params to a swagger request
@@ -122,16 +122,16 @@ func (o *GetLdapConfigV1Params) WriteToRequest(r runtime.ClientRequest, reg strf
 	}
 	var res []error
 
-	if o.Environment != nil {
+	if o.EnvironmentID != nil {
 
-		// query param environment
-		var qrEnvironment string
-		if o.Environment != nil {
-			qrEnvironment = *o.Environment
+		// query param environmentId
+		var qrEnvironmentID string
+		if o.EnvironmentID != nil {
+			qrEnvironmentID = *o.EnvironmentID
 		}
-		qEnvironment := qrEnvironment
-		if qEnvironment != "" {
-			if err := r.SetQueryParam("environment", qEnvironment); err != nil {
+		qEnvironmentID := qrEnvironmentID
+		if qEnvironmentID != "" {
+			if err := r.SetQueryParam("environmentId", qEnvironmentID); err != nil {
 				return err
 			}
 		}
